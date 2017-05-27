@@ -171,3 +171,104 @@ diff3(=, _H1, T1, _H2, T2, Diff) :-
 diff3(>,  H1-W1, T1, _H2, T2, Diff) :-
     diff21(T2, H1-W1, T1, Diff).
 
+
+%!  add_edges(+Graph, +Edges, -NewGraph)
+%
+%   NewGraph is Graph with Edges added.
+
+add_edges(Graph, Edges, NewGraph) :-
+    p_to_s_graph(Edges, G1),
+    wgraph_union(Graph, G1, NewGraph).
+
+p_to_s_graph(P_Graph, S_Graph) :-
+    sort(P_Graph, EdgeSet),
+    p_to_s_vertices(EdgeSet, VertexBag),
+    sort(VertexBag, VertexSet),
+    p_to_s_group(VertexSet, EdgeSet, S_Graph).
+
+%!  wgraph_union(+Set1, +Set2, ?Union)
+%
+%   Is true when Union is the union of Set1 and Set2. This code is a
+%   copy of set union
+
+wgraph_union(Set1, [], Set1) :- !.
+wgraph_union([], Set2, Set2) :- !.
+wgraph_union([Head1-E1|Tail1], [Head2-E2|Tail2], Union) :-
+    compare(Order, Head1, Head2),
+    wgraph_union(Order, Head1-E1, Tail1, Head2-E2, Tail2, Union).
+
+wgraph_union(=, Head-E1, Tail1, _-E2, Tail2, [Head-Es|Union]) :-
+    ord_union(E1, E2, Es),
+    wgraph_union(Tail1, Tail2, Union).
+wgraph_union(<, Head1, Tail1, Head2, Tail2, [Head1|Union]) :-
+    wgraph_union(Tail1, [Head2|Tail2], Union).
+wgraph_union(>, Head1, Tail1, Head2, Tail2, [Head2|Union]) :-
+    wgraph_union([Head1|Tail1], Tail2, Union).
+
+
+%!  del_edges(+Graph, +Edges, -NewGraph)
+%
+%   Remove Edges from Graph gives NewGraph.
+
+del_edges(Graph, Edges, NewGraph) :-
+    p_to_s_graph(Edges, G1),
+    graph_subtract(Graph, G1, NewGraph).
+
+
+%!  graph_subtract(+Set1, +Set2, ?Difference)
+%
+%   Is based on ord_subtract
+
+graph_subtract(Set1, [], Set1) :- !.
+graph_subtract([], _, []).
+graph_subtract([Head1-E1|Tail1], [Head2-E2|Tail2], Difference) :-
+    compare(Order, Head1, Head2),
+    graph_subtract(Order, Head1-E1, Tail1, Head2-E2, Tail2, Difference).
+
+graph_subtract(=, H-E1,     Tail1, _-E2,     Tail2, [H-E|Difference]) :-
+    ord_subtract(E1,E2,E),
+    graph_subtract(Tail1, Tail2, Difference).
+graph_subtract(<, Head1, Tail1, Head2, Tail2, [Head1|Difference]) :-
+    graph_subtract(Tail1, [Head2|Tail2], Difference).
+graph_subtract(>, Head1, Tail1, _,     Tail2, Difference) :-
+    graph_subtract([Head1|Tail1], Tail2, Difference).
+
+
+%!  edges(+UGraph, -Edges) is det.
+%
+%   Edges is the set of edges in UGraph. Each edge is represented as
+%   a pair From-To, where From and To are vertices in the graph.
+
+edges(Graph, Edges) :-
+s_to_p_graph(Graph, Edges).
+
+s_to_p_graph([], []) :- !.
+s_to_p_graph([Vertex-Neibs|G], P_Graph) :-
+    s_to_p_graph(Neibs, Vertex, P_Graph, Rest_P_Graph),
+    s_to_p_graph(G, Rest_P_Graph).
+
+s_to_p_graph([], _, P_Graph, P_Graph) :- !.
+s_to_p_graph([Neib-Weight|Neibs], Vertex, [Vertex-Neib-Weight|P], Rest_P) :-
+    s_to_p_graph(Neibs, Vertex, P, Rest_P).
+
+
+
+%!  neighbors(+Vertex, +Graph, -Neigbours) is det.
+%!  neighbours(+Vertex, +Graph, -Neigbours) is det.
+%
+%   Neigbours is a sorted list of the neighbours of Vertex in Graph.
+
+neighbors(Vertex, Graph, Neig) :-
+    neighbours(Vertex, Graph, Neig).
+
+neighbours(V,[V0-Nws|_],Nbs) :-
+    V == V0,
+    strip_neighbors(Nws, Nbs),   %% move cut before this?
+    !.
+neighbours(V,[_|G],Neig) :-
+neighbours(V,G,Neig).
+
+strip_neighbors([], []).
+strip_neighbors([N-_|Nweights], [N|Nbs]) :-
+    strip_neighbors(Nweights, Nbs).
+
