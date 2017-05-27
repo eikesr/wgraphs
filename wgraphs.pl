@@ -10,7 +10,6 @@
 
 :- use_module(library(ordsets), [
         ord_add_element/3,
-        ord_subtract/3,
         ord_union/3,
         ord_union/4
    ]).
@@ -139,36 +138,36 @@ del_vertices([V-Edges|G], [V0|Vs], V1, NG) :-
 
 del_remaining_edges_for_vertices([], _, []).
 del_remaining_edges_for_vertices([V0-Edges|G], V1, [V0-NEdges|NG]) :-
-    ord_subtract(Edges, V1, NEdges),
+    edges_vertices_subtract(Edges, V1, NEdges),
     del_remaining_edges_for_vertices(G, V1, NG).
 
 split_on_del_vertices(<, V, Edges, Vs, Vs, V1, [V-NEdges|NG], NG) :-
-    ord_subtract(Edges, V1, NEdges).
+    edges_vertices_subtract(Edges, V1, NEdges).
 split_on_del_vertices(>, V, Edges, [_|Vs], Vs, V1, [V-NEdges|NG], NG) :-
-    ord_subtract(Edges, V1, NEdges).
+    edges_vertices_subtract(Edges, V1, NEdges).
 split_on_del_vertices(=, _, _, [_|Vs], Vs, _, NG, NG).
 
-%% oset_diff(+InOSet, +NotInOSet, -Diff)
-%   ordered set difference
+%!  edges_vertices_subtract(+Edges, +Vertices, -NewEdges)
+%   NewEdges contains all Edges that don't contain any of Vertices.
 
-oset_diff([], _Not, []).
-oset_diff([H1|T1], L2, Diff) :-
+edges_vertices_subtract([], _Not, []).
+edges_vertices_subtract([H1|T1], L2, Diff) :-
     diff21(L2, H1, T1, Diff).
 
-diff21([], H1, T1, [H1|T1]).
-diff21([H2|T2], H1, T1, Diff) :-
+diff21([], H1-W1, T1, [H1-W1|T1]).
+diff21([H2|T2], H1-W1, T1, Diff) :-
     compare(Order, H1, H2),
-    diff3(Order, H1, T1, H2, T2, Diff).
+    diff3(Order, H1-W1, T1, H2, T2, Diff).
 
 diff12([], _H2, _T2, []).
-diff12([H1|T1], H2, T2, Diff) :-
+diff12([H1-W1|T1], H2, T2, Diff) :-
     compare(Order, H1, H2),
-    diff3(Order, H1, T1, H2, T2, Diff).
+    diff3(Order, H1-W1, T1, H2, T2, Diff).
 
-diff3(<,  H1, T1,  H2, T2, [H1|Diff]) :-
+diff3(<,  H1-W1, T1,  H2, T2, [H1-W1|Diff]) :-
     diff12(T1, H2, T2, Diff).
 diff3(=, _H1, T1, _H2, T2, Diff) :-
-    oset_diff(T1, T2, Diff).
-diff3(>,  H1, T1, _H2, T2, Diff) :-
-diff21(T2, H1, T1, Diff).
+    edges_vertices_subtract(T1, T2, Diff).
+diff3(>,  H1-W1, T1, _H2, T2, Diff) :-
+    diff21(T2, H1-W1, T1, Diff).
 
